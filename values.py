@@ -20,8 +20,7 @@ def main():
         con = sqlite3.connect(DBNAME, isolation_level=None)
         value = read_db(con)
         for i in value:
-		print('{0}.value {1}'.format(i[0], i[1]))
-        con.close()
+            print('{0}.value {1}'.format(i[0], i[1]))
 
     finally:
         con.close()
