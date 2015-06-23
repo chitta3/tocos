@@ -50,14 +50,14 @@
 
 
 import sqlite3
-import string
+# import string
 import serial
 import time
 import datetime
-#import locale
+# import locale
 import syslog
-#import signal
-#import sys
+# import signal
+# import sys
 import os
 
 DBNAME = "/var/log/tocos/data1.db"
@@ -65,39 +65,40 @@ DBNAME = "/var/log/tocos/data1.db"
 SERIALPORT = "/dev/ttyUSB0"
 BAUDRATE = 115200
 
-global con
-global ser
+global ser # serial i/o handle
+global con # sqlite db connection handle
 
 def init_serial():
     try:
-#       ser = serial.Serial(port, rate)
-        ser.bytesize = serial.EIGHTBITS #number of bits per bytes
-        ser.parity = serial.PARITY_NONE #set parity check: no parity
-        ser.stopbits = serial.STOPBITS_ONE #number of stop bits
+        ser = serial.Serial(SERIALPORT, BAUDRATE)
 
-        #ser.timeout = None          #block read
-        #ser.timeout = 0             #non-block read
-        ser.timeout = 2              #timeout block read
-        ser.xonxoff = False     #disable software flow control
-        ser.rtscts = False     #disable hardware (RTS/CTS) flow control
-        ser.dsrdtr = False       #disable hardware (DSR/DTR) flow control
-        ser.writeTimeout = 0     #timeout for write
+        ser.bytesize = serial.EIGHTBITS # number of bits per bytes
+        ser.parity = serial.PARITY_NONE # set parity check: no parity
+        ser.stopbits = serial.STOPBITS_ONE # number of stop bits
+
+        # ser.timeout = None          # block read
+        # ser.timeout = 0             # non-block read
+        ser.timeout = 2              # timeout block read
+        ser.xonxoff = False     # disable software flow control
+        ser.rtscts = False     # disable hardware (RTS/CTS) flow control
+        ser.dsrdtr = False       # disable hardware (DSR/DTR) flow control
+        ser.writeTimeout = 0     # timeout for write
 
         ser.open()
-        ser.flushInput() #flush input buffer, discarding all its contents
-        ser.flushOutput()#flush output buffer, aborting current output
+        ser.flushInput()    # flush input buffer, discarding all its contents
+        ser.flushOutput()   # flush output buffer, aborting current output
         return
 
     except Exception, e:
         print("error open serial port: " + str(e))
         exit()
 
-#def sigint_handler(signal, frame):
-    #syslog.closelog()
-    #ser.close()
-    #con.close()
-    #print("\nInterrupted")
-    #sys.exit(0)
+# def sigint_handler(signal, frame):
+    # syslog.closelog()
+    # ser.close()
+    # con.close()
+    # print("\nInterrupted")
+    # sys.exit(0)
 
 def conv_temp1(val):
     return (int(val) / 100.0)
@@ -132,7 +133,7 @@ func2 = 3
 TAG3 = 4
 func3 = 5
 
-def write_senser(line, con):
+def write_senser(line):
     key = line[ADDR]
     print key
     print line[MAIN]
@@ -145,38 +146,39 @@ def write_senser(line, con):
     list = [(TAG1, MAIN), (TAG2, ADC1), (TAG3, ADC2)]
     for tag, val in list:
         if Nodes[key][tag] != 'NONE':
-            write_db(con, Nodes[key][tag], line[val], line[BATT], line[TIME], line[ADDR])
+            write_db(Nodes[key][tag], line[val], line[BATT], line[TIME], line[ADDR])
 
-def temp_senser(line, con):
-    line[7] = "{0:.2f}".format(int(line[7]) / 100.0 + 2)	#Temperrature
-    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 + 10)	#ADC1 (mV)
-    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 + 10)	#ADC2 (mV)
+def temp_senser(line):
+    line[7] = "{0:.2f}".format(int(line[7]) / 100.0 + 2)	# Temperrature
+    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 + 10)	# ADC1 (mV)
+    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 + 10)	# ADC2 (mV)
 
-    write_db(con, 'OuterTemp', line[7], line[6], line[12], line[5])
-    write_db(con, 'OMsysTemp', line[10], line[6], line[12], line[5])
-
-    return line
-
-def adt7410_temp_senser(line, con):
-    line[7] = "{0:.2f}".format(int(line[7]) / 100.0 + 2)	#Temperrature
-    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 + 10)	#ADC1 (mV)
-    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 + 10)	#ADC2 (mV)
-
-    write_db(con, 'OMairTemp', line[7], line[6], line[12], line[5])
-    write_db(con, 'Outer2Temp', line[10], line[6], line[12], line[5])
+    write_db('OuterTemp', line[7], line[6], line[12], line[5])
+    write_db('OMsysTemp', line[10], line[6], line[12], line[5])
 
     return line
-def atom_senser(line, con):
+
+def adt7410_temp_senser(line):
+    line[7] = "{0:.2f}".format(int(line[7]) / 100.0 + 2)	# Temperrature
+    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 + 10)	# ADC1 (mV)
+    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 + 10)	# ADC2 (mV)
+
+    write_db('OMairTemp', line[7], line[6], line[12], line[5])
+    write_db('Outer2Temp', line[10], line[6], line[12], line[5])
+
+    return line
+def atom_senser(line):
     # line[7]  Atmospheric Pressure (hPa)
-    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 +2)	#ADC1 (mV)
-    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 +2)	#ADC2 (mV)
+    line[9] = "{0:.2f}".format((int(line[9]) -600) / 10.0 +2)	# ADC1 (mV)
+    line[10] = "{0:.2f}".format((int(line[10]) -600) / 10.0 +2)	# ADC2 (mV)
 
-    write_db(con, 'AtomPress', line[7], line[6], line[12], line[5])
-    write_db(con, 'WaterTemp', line[9], line[6], line[12], line[5])
+    write_db('AtomPress', line[7], line[6], line[12], line[5])
+    write_db('WaterTemp', line[9], line[6], line[12], line[5])
 
     return line
 
-def write_db(con, type, value, batt, stump, addr):
+def write_db(type, value, batt, stump, addr):
+    con = sqlite3.connect(DBNAME, isolation_level=None)
     c = con.execute("""SELECT * FROM data WHERE id = '{0}';""".format(type))
 
     r = c.fetchall()
@@ -190,7 +192,7 @@ def write_db(con, type, value, batt, stump, addr):
     else:
         c = con.execute("""INSERT INTO data(id, value, batt, timestump, address)
             VALUES('{0}', '{1}', '{2}', '{3}', '{4}');""".format(type, value, batt, stump, addr))
-
+    con.close()
     return
 
 def main():
@@ -201,7 +203,7 @@ def main():
             print "cannot open serial port "
             return
 
-        con = sqlite3.connect(DBNAME, isolation_level=None)
+#       con = sqlite3.connect(DBNAME, isolation_level=None)
 
         while True:
             response = ser.readline()
@@ -212,14 +214,14 @@ def main():
                 line = line + [d.strftime("%Y%m%d%H%M%S")]	# TimeStump
                 syslog.syslog("{0[TIME]};{0[PKID]};{0[ADDR]};{0[MAIN]};{0[ADC1]};{0[ADC2]};{0[BATT]}".format(line))
                 print line
-                write_senser(line, con)
+                write_senser(line)
                 print line
 #               if line[11] == 'L':	                 # アナログ温度センサ
-#                   line = temp_senser(line, con)
+#                   line = temp_senser(line)
 #               elif line[11] == 'D':               # ADT7410 温度センサ
-#                   line = adt7410_temp_senser(line, con)
+#                   line = adt7410_temp_senser(line)
 #               elif line[11] == 'M':               # 気圧センサ
-#                   line = atom_senser(line, con)
+#                   line = atom_senser(line)
 #               print line
 #               print("{0[12]};{0[11]};{0[5]};{0[7]};{0[9]};{0[10]};{0[6]}".format(line))
 #               syslog.syslog("{0[12]};{0[11]};{0[5]};{0[7]};{0[9]};{0[10]};{0[6]}".format(line))
@@ -244,5 +246,5 @@ def savepid():
 
 if __name__ == "__main__":
 #    savepid()
-    ser = serial.Serial(SERIALPORT, BAUDRATE)
+#   ser = serial.Serial(SERIALPORT, BAUDRATE)
     main()
