@@ -1,0 +1,35 @@
+#!/bin/sh
+
+#%# family=auto
+#%# capabilities=autoconf
+
+GETNUM=`python /usr/local/bin/getbatt.py 5`
+
+if [ "$1" = "autoconf" ]; then
+        if [ -n "${GETNUM}" ] ; then
+                echo yes
+                exit 0
+        else
+                echo no
+                exit 0
+        fi
+fi
+
+if [ "$1" = "config" ]; then
+        echo 'graph_title Wireless Tag battery Voltage'
+        echo 'graph_args --base 1000 --lower-limit 2000'
+        echo 'graph_order volt00 volt01 volt02 volt03 volt04'
+        echo 'graph_vlabel mV'
+        echo 'graph_category RaspberryPi'
+
+	echo 'volt00.label Tag00'
+	echo 'volt01.label Tag01'
+	echo 'volt02.label Tag02'
+	echo 'volt03.label Tag03'
+	echo 'volt04.label Tag04'
+#	echo 'volt00.cdef volt0, 3500,/'
+
+        exit 0
+fi
+
+echo "$GETNUM"
