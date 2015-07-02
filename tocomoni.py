@@ -15,6 +15,14 @@ import syslog
 # import signal
 # import sys
 import os
+from daemon import daemon
+from daemon.pidlockfile import PIDLockFile
+
+dc = DaemonContext(
+    pidfile=PIDLockFile('/var/run/tocomoni.pid'),
+    stderr=open('/var/log/tocomoni_err_console.txt’, 'w+')
+)
+
 def conv_temp1(val):
     return (int(val) / 100.0)
 
@@ -146,15 +154,17 @@ def main():
         syslog.closelog()
         con.close()
 
-def savepid():
-    f = open('/var/run/tocomoni.pid', 'w')
-    f.write(str(os.getpid())+'\n')
-    f.close()
+#   def savepid():
+#       f = open('/var/run/tocomoni.pid', 'w')
+#       f.write(str(os.getpid())+'\n')
+#       f.close()
 
 if __name__ == "__main__":
-    savepid()
+#
+#    savepid()
 #   ser = serial.Serial(SERIALPORT, BAUDRATE)
-    main()
+    with dc:
+        main()
 
 # ;1001;00000000;159;003;1007bbd;2970;2680;6696;1116;0858;L;
 # ;*1  ;*2      ;*3 ;*4 ;*5     ;*6  ;*7  ;*8  ;*9  ;*10 ;*11;
